@@ -61,8 +61,32 @@ export const getFieldArgsDict = (
  */
 export const getArgsToVarsStr = dict =>
 	Object.entries(dict)
-		.map(([varName, arg]) => `${arg.name}: $${varName}`)
+		.map(mapArgsToVars /* ([varName, arg]) => `${arg.name}: $${varName}` */)
 		.join(', ');
+
+function mapArgsToVars([varName, arg]) {
+
+	let type = arg.type;
+	while (type.ofType) type = type.ofType
+
+	console.log("\nName:", varName,
+				"\nType:", type.name);
+
+	let varValue = "$BLABLABLA" /* `$${varName}` */;
+
+	/* We get suitable random value based on variable type... */
+	/* for complex types, we need to deepen to it's simple type 
+	fields and construct an object */
+	
+	/* See result.txt file */
+	if(type.name === "String") {
+		varValue = "$BLABLABLA";
+	} else if (type.name === "Int") {
+		varValue = -1;
+	}
+
+	return `${arg.name}: ${varValue}`;
+}
 
 /**
  * Generate types string

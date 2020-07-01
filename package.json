@@ -160,7 +160,7 @@
         }
       ],
       "indent": [
-        "error",
+        "off",
         "tab"
       ],
       "func-names": "off",

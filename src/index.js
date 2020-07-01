@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
+const fs = require("fs");
 
 /**
  * Generate the query for the specified field
@@ -57,7 +58,8 @@ export const generateQuery = ({
 					.filter(([key]) => skeletonKeys.indexOf(key) !== -1)
 			} else skeleton = {};
 			childQuery = childQuery
-				.map(([key, childField]) => generateQueryRecursive({
+				.map(([key, childField]) => {
+					return generateQueryRecursive({
 					field: childField,
 					skeleton: skeleton[key],
 					parentName: field.name,
@@ -66,7 +68,7 @@ export const generateQuery = ({
 					crossReferenceKeyList,
 					curDepth: curDepth + 1,
 					path: path.concat(field.name)
-				}).queryStr)
+				}).queryStr})
 				.filter(cur => cur)
 				.join('\n');
 		}
@@ -174,6 +176,8 @@ export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict)
 	} else {
 		moduleConsole.warn('No subscription type found in your schema');
 	}
+
+	fs.writeFile("result.txt", JSON.stringify(result));
 
 	return result;
 }
