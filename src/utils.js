@@ -73,61 +73,63 @@ function mapArgsToVars([varName, arg]) {
 				"\nType:", type.name); */
 
 	// eslint-disable-next-line no-unused-vars
-	let varValue = "$BLABLABLA" /* `$${varName}` */;
+	const varValue = "$BLABLABLA" /* `$${varName}` */;
 
 	/* We get suitable random value based on variable type... */
 	/* for complex types, we need to deepen to it's simple type 
 	fields and construct an object */
 
 	/* See result.txt file */
-	if (type.name === "String") {
+/* 	if (type.name === "String") {
 		varValue = "STRING";
 	} else if (type.name === "Int") {
 		varValue = -1;
-	}
+	} */
 
 	// eslint-disable-next-line prefer-const
-	let varValue2 = "";
+	var varValue2 = "";
 	
 	const Go = (_arg) => {
-		let t = _arg.type;
+ 		let t = _arg;
 		while (t.ofType) t = t.ofType;
 
 		/* console.log(
 			"\nArg Name:", arg.name,
 			"\nArg Type:", t.name); */
-		if (_arg.type.getFields) { /* IT IS A COMPLEX TYPE */
-			let numberOfFields = 0;
-			varValue2 = "{ ";
-			for (const [name, data] of Object.entries(_arg.type.getFields())) {
 
-				let dataType = data.type;
-				while (dataType.ofType) dataType = dataType.ofType
-				/* console.log(
-					"\nArg Name:", name,
-					"\nArg Type:", dataType.name); */
+		let numberOfFields = 0;
+		varValue2 = "{ ";
+		for (const [name, data] of Object.entries(t.getFields())) {
 
-				if (numberOfFields > 0) varValue2 += ", ";
+			let dataType = data.type;
+			while (dataType.ofType) dataType = dataType.ofType
+			/* console.log(
+				"\nArg Name:", name,
+				"\nArg Type:", dataType.name); */
 
-				varValue2 += `${name}: `;
+			if (numberOfFields > 0) varValue2 += ", ";
 
-				if (dataType.name === "String") {
-					varValue2 += "STRING";
-				} else if (dataType.name === "Int") {
-					varValue2 += -1;
-				} else {
-					Go(data, varValue2);
-				}
+			varValue2 += `${name}: `;
 
-				++numberOfFields;
+			if (dataType.name === "String") {
+				varValue2 += "STRING";
+			} else if (dataType.name === "Int") {
+				varValue2 += -1;
+			} else {
+				Go(data.type);
 			}
-			varValue2 += " }";
-		} else { /* IT IS A SIMPLE TYPE */
-			varValue2 += `BOOM!`;
+
+			++numberOfFields;
 		}
+			
+		varValue2 += " }";
 	}
 
-	Go(arg);
+	if(type.getFields) {
+		Go(type);
+	} else {
+		varValue2 += `BOOM!`;
+	}
 	console.log(varValue2);
 
 	/* for complex types */
