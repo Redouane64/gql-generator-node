@@ -72,6 +72,7 @@ function mapArgsToVars([varName, arg]) {
 	/* console.log("\nName:", varName,
 				"\nType:", type.name); */
 
+	// eslint-disable-next-line no-unused-vars
 	let varValue = "$BLABLABLA" /* `$${varName}` */;
 
 	/* We get suitable random value based on variable type... */
@@ -85,27 +86,54 @@ function mapArgsToVars([varName, arg]) {
 		varValue = -1;
 	}
 
-	let t = arg.type;
-	while (t.ofType) t = t.ofType;
+	// eslint-disable-next-line prefer-const
+	let varValue2 = "";
 	
-	console.log(
-		"\nArg Name:", arg.name,
-		"\nArg Type:", t.name);
-	
-	if (arg.type.getFields) {
-		for (const [name, data] of Object.entries(arg.type.getFields())) {
-			let dataType = data.type;
-			while (dataType.ofType) dataType = dataType.ofType
-			console.log(
-				"\nArg Name:", name,
-				"\nArg Type:", dataType.name);
+	const Go = (_arg) => {
+		let t = _arg.type;
+		while (t.ofType) t = t.ofType;
+
+		/* console.log(
+			"\nArg Name:", arg.name,
+			"\nArg Type:", t.name); */
+		if (_arg.type.getFields) { /* IT IS A COMPLEX TYPE */
+			let numberOfFields = 0;
+			varValue2 = "{ ";
+			for (const [name, data] of Object.entries(_arg.type.getFields())) {
+
+				let dataType = data.type;
+				while (dataType.ofType) dataType = dataType.ofType
+				/* console.log(
+					"\nArg Name:", name,
+					"\nArg Type:", dataType.name); */
+
+				if (numberOfFields > 0) varValue2 += ", ";
+
+				varValue2 += `${name}: `;
+
+				if (dataType.name === "String") {
+					varValue2 += "STRING";
+				} else if (dataType.name === "Int") {
+					varValue2 += -1;
+				} else {
+					Go(data, varValue2);
+				}
+
+				++numberOfFields;
+			}
+			varValue2 += " }";
+		} else { /* IT IS A SIMPLE TYPE */
+			varValue2 += `BOOM!`;
 		}
 	}
+
+	Go(arg);
+	console.log(varValue2);
 
 	/* for complex types */
 	//const object = createObjectShape(arg.type);
 	//console.log(object);
-	return `${arg.name}: ${varValue}`;
+	return `${arg.name}: ${varValue2}`;
 }
 /* 
 function createObjectShape(obj) {
