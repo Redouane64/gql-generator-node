@@ -69,24 +69,73 @@ function mapArgsToVars([varName, arg]) {
 	let type = arg.type;
 	while (type.ofType) type = type.ofType
 
-	console.log("\nName:", varName,
-				"\nType:", type.name);
+	/* console.log("\nName:", varName,
+				"\nType:", type.name); */
 
 	let varValue = "$BLABLABLA" /* `$${varName}` */;
 
 	/* We get suitable random value based on variable type... */
 	/* for complex types, we need to deepen to it's simple type 
 	fields and construct an object */
-	
+
 	/* See result.txt file */
-	if(type.name === "String") {
-		varValue = "$BLABLABLA";
+	if (type.name === "String") {
+		varValue = "STRING";
 	} else if (type.name === "Int") {
 		varValue = -1;
 	}
 
+	let t = arg.type;
+	while (t.ofType) t = t.ofType;
+	
+	console.log(
+		"\nArg Name:", arg.name,
+		"\nArg Type:", t.name);
+	
+	if (arg.type.getFields) {
+		for (const [name, data] of Object.entries(arg.type.getFields())) {
+			let dataType = data.type;
+			while (dataType.ofType) dataType = dataType.ofType
+			console.log(
+				"\nArg Name:", name,
+				"\nArg Type:", dataType.name);
+		}
+	}
+
+	/* for complex types */
+	//const object = createObjectShape(arg.type);
+	//console.log(object);
 	return `${arg.name}: ${varValue}`;
 }
+/* 
+function createObjectShape(obj) {
+
+	let result = "";
+	result += "{";
+
+	const recursivelyCreateObjectShape = (type, _result) => {
+
+		if(type.getFields) {
+			_result += "{";
+			type.getFields().forEach(field => {
+				if (field.getFields) {
+					recursivelyCreateObjectShape(field, _result);
+				} else {
+					_result += `${field.name}: "BOOM"`;
+				}
+			});
+			_result += "}";
+		} else {
+			_result += `${type.name}: "BOOM"`;
+		}
+	}
+
+	recursivelyCreateObjectShape(obj, result);
+
+	result += "}";
+	return result;
+}
+ */
 
 /**
  * Generate types string
