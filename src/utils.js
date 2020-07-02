@@ -69,52 +69,28 @@ function mapArgsToVars([varName, arg]) {
 	let type = arg.type;
 	while (type.ofType) type = type.ofType
 
-	/* console.log("\nName:", varName,
-				"\nType:", type.name); */
-
 	// eslint-disable-next-line no-unused-vars
-	const varValue = "$BLABLABLA" /* `$${varName}` */;
-
-	/* We get suitable random value based on variable type... */
-	/* for complex types, we need to deepen to it's simple type 
-	fields and construct an object */
-
-	/* See result.txt file */
-/* 	if (type.name === "String") {
-		varValue = "STRING";
-	} else if (type.name === "Int") {
-		varValue = -1;
-	} */
-
-	// eslint-disable-next-line prefer-const
-	var varValue2 = "";
+	let varValue = "" /* `$${varName}` */;
 	
 	const Go = (_arg) => {
  		let t = _arg;
 		while (t.ofType) t = t.ofType;
 
-		/* console.log(
-			"\nArg Name:", arg.name,
-			"\nArg Type:", t.name); */
-
 		let numberOfFields = 0;
-		varValue2 = "{ ";
+		varValue += "{ ";
 		for (const [name, data] of Object.entries(t.getFields())) {
 
 			let dataType = data.type;
 			while (dataType.ofType) dataType = dataType.ofType
-			/* console.log(
-				"\nArg Name:", name,
-				"\nArg Type:", dataType.name); */
 
-			if (numberOfFields > 0) varValue2 += ", ";
+			if (numberOfFields > 0) varValue += ", ";
 
-			varValue2 += `${name}: `;
+			varValue += `${name}: `;
 
 			if (dataType.name === "String") {
-				varValue2 += "STRING";
+				varValue += "STRING";
 			} else if (dataType.name === "Int") {
-				varValue2 += -1;
+				varValue += -1;
 			} else {
 				Go(data.type);
 			}
@@ -122,50 +98,18 @@ function mapArgsToVars([varName, arg]) {
 			++numberOfFields;
 		}
 			
-		varValue2 += " }";
+		varValue += " }";
 	}
 
 	if(type.getFields) {
 		Go(type);
 	} else {
-		varValue2 += `BOOM!`;
-	}
-	console.log(varValue2);
-
-	/* for complex types */
-	//const object = createObjectShape(arg.type);
-	//console.log(object);
-	return `${arg.name}: ${varValue2}`;
-}
-/* 
-function createObjectShape(obj) {
-
-	let result = "";
-	result += "{";
-
-	const recursivelyCreateObjectShape = (type, _result) => {
-
-		if(type.getFields) {
-			_result += "{";
-			type.getFields().forEach(field => {
-				if (field.getFields) {
-					recursivelyCreateObjectShape(field, _result);
-				} else {
-					_result += `${field.name}: "BOOM"`;
-				}
-			});
-			_result += "}";
-		} else {
-			_result += `${type.name}: "BOOM"`;
-		}
+		varValue += `BOOM!`;
 	}
 
-	recursivelyCreateObjectShape(obj, result);
-
-	result += "}";
-	return result;
+	console.log(varValue);
+	return `${arg.name}: ${varValue}`;
 }
- */
 
 /**
  * Generate types string

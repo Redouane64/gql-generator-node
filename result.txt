@@ -1,1 +1,1 @@
-{"mutations":{"signin":"query signin($email: String!, $password: String!){\n    signin(email: BOOM!, password: BOOM!)\n}","setConfig":"query setConfig($prefs: PrefsInput){\n    setConfig(prefs: { language: STRING, age: -1 })\n}"}}
+{"mutations":{"signin":"query signin($email: String!, $password: String!){\n    signin(email: BOOM!, password: BOOM!)\n}","setConfig":"query setConfig($prefs: PrefsInput){\n    setConfig(prefs: { language: STRING, age: -1, data: { name: STRING, lat: -1, Lon: -1 } })\n}"}}
