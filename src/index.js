@@ -2,6 +2,7 @@
 
 import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
 const fs = require("fs");
+const { buildFederatedSchema } = require('@apollo/federation');
 
 /**
  * Generate the query for the specified field

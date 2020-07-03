@@ -34,6 +34,7 @@
   },
   "homepage": "https://github.com/Skitionek/gql-generator-node/#readme",
   "dependencies": {
+    "@apollo/federation": "^0.17.0",
     "graphql": "^0.13.2"
   },
   "devDependencies": {
