@@ -69,46 +69,54 @@ function mapArgsToVars([varName, arg]) {
 	let type = arg.type;
 	while (type.ofType) type = type.ofType
 
-	// eslint-disable-next-line no-unused-vars
-	let varValue = "" /* `$${varName}` */;
+	const value = generateArgumentsValues(type);
+
+	return `${arg.name}: ${value}`;
+}
+
+function generateArgumentsValues(type) {
 	
-	const Go = (_arg) => {
- 		let t = _arg;
+	let value = "";
+
+	const createArgumentValueRecursively = (_arg) => {
+
+		let t = _arg;
 		while (t.ofType) t = t.ofType;
 
 		let numberOfFields = 0;
-		varValue += "{ ";
+		value += "{ ";
+
 		for (const [name, data] of Object.entries(t.getFields())) {
 
 			let dataType = data.type;
 			while (dataType.ofType) dataType = dataType.ofType
 
-			if (numberOfFields > 0) varValue += ", ";
+			if (numberOfFields > 0) value += ", ";
 
-			varValue += `${name}: `;
-
+			value += `${name}: `;
+			/* TODO: replace dummy values */
 			if (dataType.name === "String") {
-				varValue += "STRING";
+				value += "STRING";
 			} else if (dataType.name === "Int") {
-				varValue += -1;
+				value += -1;
 			} else {
-				Go(data.type);
+				createArgumentValueRecursively(data.type);
 			}
 
 			++numberOfFields;
 		}
-			
-		varValue += " }";
+
+		value += " }";
 	}
 
-	if(type.getFields) {
-		Go(type);
+	if (type.getFields) {
+		createArgumentValueRecursively(type);
 	} else {
-		varValue += `BOOM!`;
+		/* TODO: replace dummy values */
+		value += `BOOM!`;
 	}
 
-	console.log(varValue);
-	return `${arg.name}: ${varValue}`;
+	return value;
 }
 
 /**
