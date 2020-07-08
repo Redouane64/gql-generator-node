@@ -66,50 +66,44 @@ export const getArgsToVarsStr = dict =>
 
 function mapArgsToVars([varName, arg]) {
 
-	let type = arg.type;
-	while (type.ofType) type = type.ofType
-
-	const value = generateArgumentsValues(type);
-
+	const value = generateArgumentsValues(arg, varName);
 	return `${arg.name}: ${value}`;
 }
 
-function generateArgumentsValues(type) {
+function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null) {
 	
 	let value = "";
 
-	const createArgumentValueRecursively = (_arg) => {
+	const createArgumentValueRecursively = (fieldTypeInfo, fieldName = null) => {
 
-		let t = _arg;
-		while (t.ofType) t = t.ofType;
+		let type = fieldTypeInfo.type;
+		while (type.ofType) type = type.ofType;
 
 		let numberOfFields = 0;
-		if (t.astNode && t.astNode.kind === 'InputObjectTypeDefinition') {
+		if (type.astNode && type.astNode.kind === 'InputObjectTypeDefinition') {
+
 			value += "{ ";
-			for (const [name, data] of Object.entries(t.getFields())) {
-
-				let dataType = data.type;
-				while (dataType.ofType) dataType = dataType.ofType
-
-				if (numberOfFields > 0) value += ", ";
-
-				value += `${name}: `;
-
-				/* TODO: replace dummy values, a better way to
-				distinguish between primitive and complex types */
-
-				createArgumentValueRecursively(data.type);
-
-				++numberOfFields;
+			for (const [name, data] of Object.entries(type.getFields())) {
+				createArgumentValueRecursively(data, name);
 			}
 			value += " }";
 		} else {
-			value += "BOOOOOOM!"
+
+			if (!fieldTypeInfo.type.toString().endsWith('!')) {
+				return;
+			}
+			if(numberOfFields > 0) value += ",";
+			value += "BOOOOOOM!";
+			++numberOfFields;
 		}
 
 	}
 
-	createArgumentValueRecursively(type);
+	if (!parentFieldTypeInfo.type.toString().endsWith('!')) {
+		return null;
+	}
+
+	createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name);
 	return value;
 }
 
