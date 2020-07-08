@@ -84,38 +84,32 @@ function generateArgumentsValues(type) {
 		while (t.ofType) t = t.ofType;
 
 		let numberOfFields = 0;
-		value += "{ ";
+		if (t.astNode && t.astNode.kind === 'InputObjectTypeDefinition') {
+			value += "{ ";
+			for (const [name, data] of Object.entries(t.getFields())) {
 
-		for (const [name, data] of Object.entries(t.getFields())) {
+				let dataType = data.type;
+				while (dataType.ofType) dataType = dataType.ofType
 
-			let dataType = data.type;
-			while (dataType.ofType) dataType = dataType.ofType
+				if (numberOfFields > 0) value += ", ";
 
-			if (numberOfFields > 0) value += ", ";
+				value += `${name}: `;
 
-			value += `${name}: `;
-			/* TODO: replace dummy values */
-			if (dataType.name === "String") {
-				value += "STRING";
-			} else if (dataType.name === "Int") {
-				value += -1;
-			} else {
+				/* TODO: replace dummy values, a better way to
+				distinguish between primitive and complex types */
+
 				createArgumentValueRecursively(data.type);
-			}
 
-			++numberOfFields;
+				++numberOfFields;
+			}
+			value += " }";
+		} else {
+			value += "BOOOOOOM!"
 		}
 
-		value += " }";
 	}
 
-	if (type.getFields) {
-		createArgumentValueRecursively(type);
-	} else {
-		/* TODO: replace dummy values */
-		value += `BOOM!`;
-	}
-
+	createArgumentValueRecursively(type);
 	return value;
 }
 
