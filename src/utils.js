@@ -90,12 +90,23 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 				return `${field}: ${createArgumentValueRecursively(typeInfo, field, _requiredOnly)}`;
 			}).join(",");
 			_value += " }";
+		} else if (type.astNode && type.astNode.kind === 'EnumTypeDefinition') {
+			if(_requiredOnly) {
+				if (!fieldTypeInfo.type.toString().endsWith('!')) {
+					return;
+				}
+			}
+			_value += type.astNode.values[0].name.value;
 		} else {
 			if(_requiredOnly) {
 				if (!fieldTypeInfo.type.toString().endsWith('!')) {
 					return;
 				}
 			}
+
+			const _v = generateScalarValue(fieldTypeInfo);
+			console.log(_v);
+			
 			_value += "BOOOOOOM!";
 		}
 
@@ -108,6 +119,21 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 
 	value += createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name, requiredOnly);
 	return value;
+}
+
+function generateScalarValue(type) {
+	let _type = type.astNode;
+	let isRequired = false;
+	while(_type.type) {
+		if(_type.kind === 'NonNullType') {
+			isRequired = true;
+		}
+		_type = _type.type;
+	}
+
+	if(isRequired) {
+		return "BOOOOM!";
+	}
 }
 
 /**
