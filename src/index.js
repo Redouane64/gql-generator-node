@@ -15,7 +15,8 @@ export const generateQuery = ({
 	                              skeleton: rootSkeleton,
 	                              kind = 'Query',
 	                              depthLimit,
-	                              dedupe = getFieldArgsDict
+								  dedupe = getFieldArgsDict,
+								  requiredFieldsOnly = false
 }) => {
 
 	/**
@@ -28,6 +29,7 @@ export const generateQuery = ({
 	 * @param crossReferenceKeyList list of the cross reference
 	 * @param curDepth current depth of field
 	 * @param path
+	 * @param requiredOnly if true, non-required field will be set to null
 	 */
 	const generateQueryRecursive = ({
 		                                field,
@@ -37,7 +39,8 @@ export const generateQuery = ({
 		                                duplicateArgCounts = {},
 		                                crossReferenceKeyList = [], // [`${parentName}To${curName}Key`]
 		                                curDepth = 1,
-		                                path = []
+										path = [],
+										requiredOnly = false
 	                                }) => {
 		let curType = field.type;
 		while (curType.ofType) curType = curType.ofType;
@@ -66,7 +69,8 @@ export const generateQuery = ({
 					duplicateArgCounts,
 					crossReferenceKeyList,
 					curDepth: curDepth + 1,
-					path: path.concat(field.name)
+					path: path.concat(field.name),
+					requiredOnly
 				}).queryStr})
 				.filter(cur => cur)
 				.join('\n');
@@ -77,7 +81,7 @@ export const generateQuery = ({
 			if (field.args.length > 0) {
 				const dict = dedupe(field, duplicateArgCounts, argumentsDict, path);
 				Object.assign(argumentsDict, dict);
-				queryStr += `(${getArgsToVarsStr(dict)})`;
+				queryStr += `(${getArgsToVarsStr(dict, requiredOnly)})`;
 			}
 			if (childQuery) {
 				queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
@@ -123,7 +127,8 @@ export const generateQuery = ({
 	return wrapQueryIntoKindDeclaration(kind, rootField, generateQueryRecursive({
 		field: rootField,
 		skeleton: rootSkeleton,
-		parentName: kind
+		parentName: kind, 
+		requiredOnly: requiredFieldsOnly
 	}));
 };
 
@@ -133,7 +138,7 @@ function wrapQueryIntoKindDeclaration(kind, alias, queryResult) {
 	return `${kind.toLowerCase()} ${alias.name}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
 }
 
-export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict) {
+export function generateAll(schema, requiredFieldsOnly = false, depthLimit = 100, dedupe = getFieldArgsDict) {
 
 	const result = {};
 
@@ -154,7 +159,7 @@ export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict)
 			`${String(description).toLowerCase()}s`;
 		result[kind] = {};
 		Object.entries(obj).forEach(([type, field]) => {
-			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe });
+			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, requiredFieldsOnly });
 		});
 	};
 

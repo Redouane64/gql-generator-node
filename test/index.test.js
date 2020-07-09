@@ -148,7 +148,7 @@ it('check warnings for no mutations, query, subscription in schema', async () =>
 
 it("Generate All", () => {
 
-	const result = generateAll(testSchema)
+	const result = generateAll(testSchema, false)
 
 	console.log(result);
 })

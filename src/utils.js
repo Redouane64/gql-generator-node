@@ -59,22 +59,24 @@ export const getFieldArgsDict = (
  * Generate variables string
  * @param dict dictionary of arguments
  */
-export const getArgsToVarsStr = dict =>
+export const getArgsToVarsStr = (dict, requiredOnly) =>
 	Object.entries(dict)
-		.map(mapArgsToVars /* ([varName, arg]) => `${arg.name}: $${varName}` */)
+		.map(([fieldName, fieldInfo]) => mapArgsToVars(fieldName, fieldInfo, requiredOnly))
 		.join(', ');
 
-function mapArgsToVars([varName, arg]) {
-
-	const value = generateArgumentsValues(arg, varName);
-	return `${arg.name}: ${value}`;
+function mapArgsToVars(fieldName, fieldTypeInfo, ignoreNonRequired) {
+	const value = generateArgumentsValues(fieldTypeInfo, fieldName, ignoreNonRequired);
+	return `${fieldTypeInfo.name}: ${value}`;
 }
 
-function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null) {
+function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, requiredOnly = false) {
 	
 	let value = "";
 
-	const createArgumentValueRecursively = (fieldTypeInfo, fieldName = null) => {
+	const createArgumentValueRecursively = 
+		(fieldTypeInfo, 
+		fieldName = null, 
+		_requiredOnly = false) => {
 
 		let type = fieldTypeInfo.type;
 		while (type.ofType) type = type.ofType;
@@ -83,12 +85,14 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null) {
 		if (type.astNode && type.astNode.kind === 'InputObjectTypeDefinition') {
 			_value += "{ ";
 			_value += Object.entries(type.getFields()).map(([field, typeInfo]) => {
-				return `${field}: ${createArgumentValueRecursively(typeInfo, field)}`;
+				return `${field}: ${createArgumentValueRecursively(typeInfo, field, _requiredOnly)}`;
 			}).join(",");
 			_value += " }";
 		} else {
-			if (!fieldTypeInfo.type.toString().endsWith('!')) {
-				return;
+			if(_requiredOnly) {
+				if (!fieldTypeInfo.type.toString().endsWith('!')) {
+					return;
+				}
 			}
 			_value += "BOOOOOOM!";
 		}
@@ -96,11 +100,11 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null) {
 		return _value;
 	}
 
-	if (!parentFieldTypeInfo.type.toString().endsWith('!')) {
+	if (requiredOnly && !parentFieldTypeInfo.type.toString().endsWith('!')) {
 		return null;
 	}
 
-	value += createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name);
+	value += createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name, requiredOnly);
 	return value;
 }
 
