@@ -1,14 +1,18 @@
-require('graphql-import-node');
+require('graphql-import-node');/* 
 const typeDefs = require('./schemas/sampleTypeDef.graphql');
-const typeDefsWithoutMutation = require('./schemas/empty.graphql');
+const typeDefsWithoutMutation = require('./schemas/empty.graphql'); */
 const makeExecutableSchema = require('graphql-tools').makeExecutableSchema;
 require('should');
 
-const schema = makeExecutableSchema({ typeDefs });
+/* const schema = makeExecutableSchema({ typeDefs });
 const schemaWithoutMutation = makeExecutableSchema({ typeDefs: typeDefsWithoutMutation });
-import { generateAll, generateQuery } from "../src";
+ */
+const schemaTypeDefs = require("./schemas/schema.graphql");
+const testSchema = makeExecutableSchema({ typeDefs: schemaTypeDefs });
 
-it('validate generated queries', async () => {
+import { generateAll/* , generateQuery */ } from "../src";
+
+/* it('validate generated queries', async () => {
 	generateAll(schema, undefined, ({ args }) => {
 		const o = {};
 		(args || []).forEach(arg => {
@@ -140,4 +144,11 @@ it('check warnings for no mutations, query, subscription in schema', async () =>
 	expect(
 		generateAll(schemaWithoutMutation)
 	).toMatchSnapshot()
-);
+); */
+
+it("Generate All", () => {
+
+	const result = generateAll(testSchema)
+
+	console.log(result);
+})
