@@ -78,32 +78,29 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null) {
 
 		let type = fieldTypeInfo.type;
 		while (type.ofType) type = type.ofType;
+		let _value = "";
 
-		let numberOfFields = 0;
 		if (type.astNode && type.astNode.kind === 'InputObjectTypeDefinition') {
-
-			value += "{ ";
-			for (const [name, data] of Object.entries(type.getFields())) {
-				createArgumentValueRecursively(data, name);
-			}
-			value += " }";
+			_value += "{ ";
+			_value += Object.entries(type.getFields()).map(([field, typeInfo]) => {
+				return `${field}: ${createArgumentValueRecursively(typeInfo, field)}`;
+			}).join(",");
+			_value += " }";
 		} else {
-
 			if (!fieldTypeInfo.type.toString().endsWith('!')) {
 				return;
 			}
-			if(numberOfFields > 0) value += ",";
-			value += "BOOOOOOM!";
-			++numberOfFields;
+			_value += "BOOOOOOM!";
 		}
 
+		return _value;
 	}
 
 	if (!parentFieldTypeInfo.type.toString().endsWith('!')) {
 		return null;
 	}
 
-	createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name);
+	value += createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name);
 	return value;
 }
 
