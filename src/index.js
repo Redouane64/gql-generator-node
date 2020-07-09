@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
-const fs = require("fs");
 
 /**
  * Generate the query for the specified field
@@ -176,8 +175,6 @@ export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict)
 	} else {
 		moduleConsole.warn('No subscription type found in your schema');
 	}
-
-	fs.writeFile("result.txt", JSON.stringify(result));
 
 	return result;
 }
