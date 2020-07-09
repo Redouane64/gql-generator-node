@@ -59,12 +59,14 @@ export const getFieldArgsDict = (
  * Generate variables string
  * @param dict dictionary of arguments
  */
-export const getArgsToVarsStr = (dict, requiredOnly) =>
+export const getArgsToVarsStr = (dict, generateValues, requiredOnly) =>
 	Object.entries(dict)
-		.map(([fieldName, fieldInfo]) => mapArgsToVars(fieldName, fieldInfo, requiredOnly))
+		.map(([fieldName, fieldInfo]) => 
+			generateValues ? mapGeneratedArgsToVars(fieldName, fieldInfo, requiredOnly) :
+			`${fieldInfo.name}: $${fieldName}`)
 		.join(', ');
 
-function mapArgsToVars(fieldName, fieldTypeInfo, ignoreNonRequired) {
+function mapGeneratedArgsToVars(fieldName, fieldTypeInfo, ignoreNonRequired) {
 	const value = generateArgumentsValues(fieldTypeInfo, fieldName, ignoreNonRequired);
 	return `${fieldTypeInfo.name}: ${value}`;
 }

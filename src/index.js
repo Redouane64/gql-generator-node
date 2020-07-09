@@ -9,6 +9,8 @@ import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } 
  * @param kind of query - Actual Query or Mutation, Subscription
  * @param depthLimit
  * @param dedupe function to resolve query variables conflicts
+ * @param generateValues seed fields with generated values for tests
+ * @param requiredFieldsOnly generate values for only required fields
  */
 export const generateQuery = ({
 	                              field: rootField,
@@ -16,6 +18,7 @@ export const generateQuery = ({
 	                              kind = 'Query',
 	                              depthLimit,
 								  dedupe = getFieldArgsDict,
+								  generateValues = false,
 								  requiredFieldsOnly = false
 }) => {
 
@@ -29,7 +32,6 @@ export const generateQuery = ({
 	 * @param crossReferenceKeyList list of the cross reference
 	 * @param curDepth current depth of field
 	 * @param path
-	 * @param requiredOnly if true, non-required field will be set to null
 	 */
 	const generateQueryRecursive = ({
 		                                field,
@@ -40,6 +42,7 @@ export const generateQuery = ({
 		                                crossReferenceKeyList = [], // [`${parentName}To${curName}Key`]
 		                                curDepth = 1,
 										path = [],
+										_generateValues = false,
 										requiredOnly = false
 	                                }) => {
 		let curType = field.type;
@@ -70,6 +73,7 @@ export const generateQuery = ({
 					crossReferenceKeyList,
 					curDepth: curDepth + 1,
 					path: path.concat(field.name),
+					_generateValues,
 					requiredOnly
 				}).queryStr})
 				.filter(cur => cur)
@@ -81,7 +85,7 @@ export const generateQuery = ({
 			if (field.args.length > 0) {
 				const dict = dedupe(field, duplicateArgCounts, argumentsDict, path);
 				Object.assign(argumentsDict, dict);
-				queryStr += `(${getArgsToVarsStr(dict, requiredOnly)})`;
+				queryStr += `(${getArgsToVarsStr(dict, _generateValues, requiredOnly)})`;
 			}
 			if (childQuery) {
 				queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
@@ -112,7 +116,9 @@ export const generateQuery = ({
 							duplicateArgCounts,
 							crossReferenceKeyList,
 							curDepth: curDepth + 2,
-							path: path.concat(field.name)
+							path: path.concat(field.name),
+							_generateValues,
+							requiredOnly
 						}).queryStr)
 						.filter(cur => cur)
 						.join('\n');
@@ -128,6 +134,7 @@ export const generateQuery = ({
 		field: rootField,
 		skeleton: rootSkeleton,
 		parentName: kind, 
+		_generateValues: generateValues,
 		requiredOnly: requiredFieldsOnly
 	}));
 };
@@ -138,7 +145,7 @@ function wrapQueryIntoKindDeclaration(kind, alias, queryResult) {
 	return `${kind.toLowerCase()} ${alias.name}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
 }
 
-export function generateAll(schema, requiredFieldsOnly = false, depthLimit = 100, dedupe = getFieldArgsDict) {
+export function generateAll(schema, generateValues = false, requiredFieldsOnly = false, depthLimit = 100, dedupe = getFieldArgsDict) {
 
 	const result = {};
 
@@ -159,7 +166,7 @@ export function generateAll(schema, requiredFieldsOnly = false, depthLimit = 100
 			`${String(description).toLowerCase()}s`;
 		result[kind] = {};
 		Object.entries(obj).forEach(([type, field]) => {
-			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, requiredFieldsOnly });
+			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, generateValues, requiredFieldsOnly });
 		});
 	};
 
