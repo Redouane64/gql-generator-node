@@ -81,12 +81,21 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 		_requiredOnly = false) => {
 
 		let isRequired = false;
+		let isList = false;
 		let astType = fieldTypeInfo.astNode.type;
 		while(astType) {
+			
+			if(astType.kind === 'ListType') {
+				isList = true;
+			}
+
 			if(astType.kind === 'NonNullType') {
 				isRequired = true;
-				break;
 			}
+
+			// if both flags set, shortcut the loop because 
+			// what's needed is found.
+			if(isRequired && isList) break;
 
 			astType = astType.type;
 		}
@@ -107,8 +116,12 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 			_value += " }";
 		} else if (type.astNode && type.astNode.kind === 'EnumTypeDefinition') {
 			_value += type.astNode.values[0].name.value;
+		} else if (isList) {
+			_value += "[";
+			_value += generateScalarValue(type, isList);
+			_value += "]";
 		} else {
-			_value += generateScalarValue(type);
+			_value += generateScalarValue(type, isList);
 		}
 
 		return _value;
@@ -129,10 +142,21 @@ const typeValueGenerators = {
 	/* eslint-disable-next-line no-magic-numbers */
 	Float: () => Math.random() * 1000000,
 	
-	Any: () => null
+	Any: () => null,
+	List: (type, size) => {
+		const list = [];
+		for(let i = 0; i < size; i++)
+			list.push(typeValueGenerators[type]());
+		return list;
+	}
 };
 
-function generateScalarValue(type) {
+function generateScalarValue(type, isList) {
+
+	if(isList && typeValueGenerators.hasOwnProperty(type.name)) {
+		/* eslint-disable-next-line no-magic-numbers */
+		return typeValueGenerators.List(type.name, 5);
+	}
 
 	if(typeValueGenerators.hasOwnProperty(type.name)) {
 		return typeValueGenerators[type.name]();
