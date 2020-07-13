@@ -80,6 +80,21 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 		fieldName = null, 
 		_requiredOnly = false) => {
 
+		let isRequired = false;
+		let astType = fieldTypeInfo.astNode.type;
+		while(astType) {
+			if(astType.kind === 'NonNullType') {
+				isRequired = true;
+				break;
+			}
+
+			astType = astType.type;
+		}
+
+		if(!isRequired) {
+			return null;
+		}
+
 		let type = fieldTypeInfo.type;
 		while (type.ofType) type = type.ofType;
 		let _value = "";
@@ -91,49 +106,43 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 			}).join(",");
 			_value += " }";
 		} else if (type.astNode && type.astNode.kind === 'EnumTypeDefinition') {
-			if(_requiredOnly) {
-				if (!fieldTypeInfo.type.toString().endsWith('!')) {
-					return;
-				}
-			}
 			_value += type.astNode.values[0].name.value;
 		} else {
-			if(_requiredOnly) {
-				if (!fieldTypeInfo.type.toString().endsWith('!')) {
-					return;
-				}
-			}
-
-			const _v = generateScalarValue(fieldTypeInfo);
-			console.log(_v);
-			
-			_value += "BOOOOOOM!";
+			_value += generateScalarValue(type);
 		}
 
 		return _value;
-	}
-
-	if (requiredOnly && !parentFieldTypeInfo.type.toString().endsWith('!')) {
-		return null;
 	}
 
 	value += createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name, requiredOnly);
 	return value;
 }
 
-function generateScalarValue(type) {
-	let _type = type.astNode;
-	let isRequired = false;
-	while(_type.type) {
-		if(_type.kind === 'NonNullType') {
-			isRequired = true;
-		}
-		_type = _type.type;
-	}
+const typeValueGenerators = {
+	String: () => "'BOOOOOM!'",
 
-	if(isRequired) {
-		return "BOOOOM!";
+	/* eslint-disable-next-line no-magic-numbers */
+	Int: () => Math.floor(Math.random() * 1000000),
+	
+	Boolean: () => true,
+
+	/* eslint-disable-next-line no-magic-numbers */
+	Float: () => Math.random() * 1000000,
+	
+	Any: () => null
+};
+
+function generateScalarValue(type) {
+
+	if(typeValueGenerators.hasOwnProperty(type.name)) {
+		return typeValueGenerators[type.name]();
 	}
+	
+	if(type.astNode && type.astNode.kind === 'ScalarTypeDefinition') {
+		throw new Error("Scalar types not suppoted");
+	}
+	
+	throw new Error(`Unrecognized type '${type.name}'`);
 }
 
 /**
