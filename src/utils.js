@@ -163,10 +163,12 @@ function generateScalarValue(type, isList) {
 	}
 	
 	if(type.astNode && type.astNode.kind === 'ScalarTypeDefinition') {
-		throw new Error("Scalar types not suppoted");
+		moduleConsole.error("Scalar types not suppoted")
+		return undefined;
 	}
 	
-	throw new Error(`Unrecognized type '${type.name}'`);
+	moduleConsole.error(`Unsupported type found.`);
+	return undefined;
 }
 
 /**
