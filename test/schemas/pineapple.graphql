@@ -1,0 +1,14 @@
+input AccountInput {
+  uuid: String!
+  id: String!
+}
+
+enum TransactionStatus {
+  PENDING
+  UNCONFIRMED
+  CONFIRMED
+}
+
+type Query {
+  account(type: AccountInput!, status: TransactionStatus!): [String]
+}

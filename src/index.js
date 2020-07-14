@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
-const fs = require("fs");
 const { buildFederatedSchema } = require('@apollo/federation');
 
 /**
@@ -11,13 +10,17 @@ const { buildFederatedSchema } = require('@apollo/federation');
  * @param kind of query - Actual Query or Mutation, Subscription
  * @param depthLimit
  * @param dedupe function to resolve query variables conflicts
+ * @param generateValues seed fields with generated values for tests
+ * @param requiredFieldsOnly generate values for only required fields
  */
 export const generateQuery = ({
 	                              field: rootField,
 	                              skeleton: rootSkeleton,
 	                              kind = 'Query',
 	                              depthLimit,
-	                              dedupe = getFieldArgsDict
+								  dedupe = getFieldArgsDict,
+								  generateValues = false,
+								  requiredFieldsOnly = false
 }) => {
 
 	/**
@@ -39,7 +42,9 @@ export const generateQuery = ({
 		                                duplicateArgCounts = {},
 		                                crossReferenceKeyList = [], // [`${parentName}To${curName}Key`]
 		                                curDepth = 1,
-		                                path = []
+										path = [],
+										_generateValues = false,
+										requiredOnly = false
 	                                }) => {
 		let curType = field.type;
 		while (curType.ofType) curType = curType.ofType;
@@ -68,7 +73,9 @@ export const generateQuery = ({
 					duplicateArgCounts,
 					crossReferenceKeyList,
 					curDepth: curDepth + 1,
-					path: path.concat(field.name)
+					path: path.concat(field.name),
+					_generateValues,
+					requiredOnly
 				}).queryStr})
 				.filter(cur => cur)
 				.join('\n');
@@ -79,7 +86,7 @@ export const generateQuery = ({
 			if (field.args.length > 0) {
 				const dict = dedupe(field, duplicateArgCounts, argumentsDict, path);
 				Object.assign(argumentsDict, dict);
-				queryStr += `(${getArgsToVarsStr(dict)})`;
+				queryStr += `(${getArgsToVarsStr(dict, _generateValues, requiredOnly)})`;
 			}
 			if (childQuery) {
 				queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
@@ -110,7 +117,9 @@ export const generateQuery = ({
 							duplicateArgCounts,
 							crossReferenceKeyList,
 							curDepth: curDepth + 2,
-							path: path.concat(field.name)
+							path: path.concat(field.name),
+							_generateValues,
+							requiredOnly
 						}).queryStr)
 						.filter(cur => cur)
 						.join('\n');
@@ -125,7 +134,9 @@ export const generateQuery = ({
 	return wrapQueryIntoKindDeclaration(kind, rootField, generateQueryRecursive({
 		field: rootField,
 		skeleton: rootSkeleton,
-		parentName: kind
+		parentName: kind, 
+		_generateValues: generateValues,
+		requiredOnly: requiredFieldsOnly
 	}));
 };
 
@@ -135,7 +146,7 @@ function wrapQueryIntoKindDeclaration(kind, alias, queryResult) {
 	return `${kind.toLowerCase()} ${alias.name}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
 }
 
-export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict) {
+export function generateAll(schema, generateValues = false, requiredFieldsOnly = false, depthLimit = 100, dedupe = getFieldArgsDict) {
 
 	const result = {};
 
@@ -156,7 +167,7 @@ export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict)
 			`${String(description).toLowerCase()}s`;
 		result[kind] = {};
 		Object.entries(obj).forEach(([type, field]) => {
-			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe });
+			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, generateValues, requiredFieldsOnly });
 		});
 	};
 
@@ -177,8 +188,6 @@ export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict)
 	} else {
 		moduleConsole.warn('No subscription type found in your schema');
 	}
-
-	fs.writeFile("result.txt", JSON.stringify(result));
 
 	return result;
 }

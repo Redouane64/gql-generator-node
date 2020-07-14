@@ -1,13 +1,19 @@
 require('graphql-import-node');
+/*
 const typeDefs = require('./schemas/sampleTypeDef.graphql');
 const typeDefsWithoutMutation = require('./schemas/empty.graphql');
+*/
 const makeExecutableSchema = require('graphql-tools').makeExecutableSchema;
 require('should');
-
+/*
 const schema = makeExecutableSchema({ typeDefs });
 const schemaWithoutMutation = makeExecutableSchema({ typeDefs: typeDefsWithoutMutation });
-import { generateAll, generateQuery } from "../src";
+*/
+const schemaTypeDefs = require("./schemas/pineapple.graphql");
+const testSchema = makeExecutableSchema({ typeDefs: schemaTypeDefs });
 
+import { generateAll /* , generateQuery */ } from "../src";
+/*
 it('validate generated queries', async () => {
 	generateAll(schema, undefined, ({ args }) => {
 		const o = {};
@@ -19,7 +25,7 @@ it('validate generated queries', async () => {
 });
 
 it('limt depth', async () =>
-	generateAll(schema, 1).mutations.signup.indexOf('createdAt').should.equal(-1)
+	generateAll(schema, false, false, 1).mutations.signup.indexOf('createdAt').should.equal(-1)
 );
 
 it('check field generator', async () =>
@@ -141,3 +147,10 @@ it('check warnings for no mutations, query, subscription in schema', async () =>
 		generateAll(schemaWithoutMutation)
 	).toMatchSnapshot()
 );
+*/
+it("Generate mock values", () => {
+
+	const result = generateAll(testSchema, true, true)
+
+	console.log(result);
+})

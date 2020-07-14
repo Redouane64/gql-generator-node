@@ -59,64 +59,120 @@ export const getFieldArgsDict = (
  * Generate variables string
  * @param dict dictionary of arguments
  */
-export const getArgsToVarsStr = dict =>
+export const getArgsToVarsStr = (dict, generateValues, requiredOnly) =>
 	Object.entries(dict)
-		.map(mapArgsToVars /* ([varName, arg]) => `${arg.name}: $${varName}` */)
+		.map(([fieldName, fieldInfo]) => 
+			generateValues ? mapGeneratedArgsToVars(fieldName, fieldInfo, requiredOnly) :
+			`${fieldInfo.name}: $${fieldName}`)
 		.join(', ');
 
-function mapArgsToVars([varName, arg]) {
-
-	let type = arg.type;
-	while (type.ofType) type = type.ofType
-
-	const value = generateArgumentsValues(type);
-
-	return `${arg.name}: ${value}`;
+function mapGeneratedArgsToVars(fieldName, fieldTypeInfo, ignoreNonRequired) {
+	const value = generateArgumentsValues(fieldTypeInfo, fieldName, ignoreNonRequired);
+	return `${fieldTypeInfo.name}: ${value}`;
 }
 
-function generateArgumentsValues(type) {
+function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, requiredOnly = false) {
 	
 	let value = "";
 
-	const createArgumentValueRecursively = (_arg) => {
+	const createArgumentValueRecursively = 
+		(fieldTypeInfo, 
+		fieldName = null, 
+		_requiredOnly = false) => {
 
-		let t = _arg;
-		while (t.ofType) t = t.ofType;
-
-		let numberOfFields = 0;
-		value += "{ ";
-
-		for (const [name, data] of Object.entries(t.getFields())) {
-
-			let dataType = data.type;
-			while (dataType.ofType) dataType = dataType.ofType
-
-			if (numberOfFields > 0) value += ", ";
-
-			value += `${name}: `;
-			/* TODO: replace dummy values */
-			if (dataType.name === "String") {
-				value += "STRING";
-			} else if (dataType.name === "Int") {
-				value += -1;
-			} else {
-				createArgumentValueRecursively(data.type);
+		let isRequired = false;
+		let isList = false;
+		let astType = fieldTypeInfo.astNode.type;
+		while(astType) {
+			
+			if(astType.kind === 'ListType') {
+				isList = true;
 			}
 
-			++numberOfFields;
+			if(astType.kind === 'NonNullType') {
+				isRequired = true;
+			}
+
+			// if both flags set, shortcut the loop because 
+			// what's needed is found.
+			if(isRequired && isList) break;
+
+			astType = astType.type;
 		}
 
-		value += " }";
+		if(!isRequired) {
+			return null;
+		}
+
+		let type = fieldTypeInfo.type;
+		while (type.ofType) type = type.ofType;
+		let _value = "";
+
+		if (type.astNode && type.astNode.kind === 'InputObjectTypeDefinition') {
+			_value += "{ ";
+			_value += Object.entries(type.getFields()).map(([field, typeInfo]) => {
+				return `${field}: ${createArgumentValueRecursively(typeInfo, field, _requiredOnly)}`;
+			}).join(",");
+			_value += " }";
+		} else if (type.astNode && type.astNode.kind === 'EnumTypeDefinition') {
+			_value += type.astNode.values[0].name.value;
+		} else if (isList) {
+			_value += "[";
+			_value += generateScalarValue(type, isList);
+			_value += "]";
+		} else {
+			_value += generateScalarValue(type, isList);
+		}
+
+		return _value;
 	}
 
-	if (type.getFields) {
-		createArgumentValueRecursively(type);
-	} else {
-		/* TODO: replace dummy values */
-		value += `BOOM!`;
-	}
-
+	value += createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name, requiredOnly);
 	return value;
+}
+
+const typeValueGenerators = {
+	/* eslint-disable-next-line no-magic-numbers */
+	String: (length = 10) => {
+		let result = "";
+		const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+		for(let i = 0; i < length; i++) {
+			result += chars.charAt(Math.floor(Math.random() * chars.length))
+		}
+		return `'${result}'`;
+	},
+
+	/* eslint-disable-next-line no-magic-numbers */
+	Int: () => Math.floor(Math.random() * 1000000),
+	
+	Boolean: () => true,
+
+	/* eslint-disable-next-line no-magic-numbers */
+	Float: () => Math.random() * 1000000,
+	
+	Any: () => null,
+
+	/* eslint-disable-next-line no-magic-numbers */
+	List: (type, size = 3) => {
+		const list = [];
+		for(let i = 0; i < size; i++)
+			list.push(typeValueGenerators[type]());
+		return list;
+	}
+};
+
+function generateScalarValue(type, isList) {
+
+	if(isList && typeValueGenerators.hasOwnProperty(type.name)) {
+		/* eslint-disable-next-line no-magic-numbers */
+		return typeValueGenerators.List(type.name);
+	}
+
+	if(typeValueGenerators.hasOwnProperty(type.name)) {
+		return typeValueGenerators[type.name]();
+	}
+	
+	return typeValueGenerators.String();
 }
 
 /**
