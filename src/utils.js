@@ -132,7 +132,15 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 }
 
 const typeValueGenerators = {
-	String: () => "'BOOOOOM!'",
+	/* eslint-disable-next-line no-magic-numbers */
+	String: (length = 10) => {
+		let result = "";
+		const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+		for(let i = 0; i < length; i++) {
+			result += chars.charAt(Math.floor(Math.random() * chars.length))
+		}
+		return `'${result}'`;
+	},
 
 	/* eslint-disable-next-line no-magic-numbers */
 	Int: () => Math.floor(Math.random() * 1000000),
@@ -143,7 +151,9 @@ const typeValueGenerators = {
 	Float: () => Math.random() * 1000000,
 	
 	Any: () => null,
-	List: (type, size) => {
+
+	/* eslint-disable-next-line no-magic-numbers */
+	List: (type, size = 3) => {
 		const list = [];
 		for(let i = 0; i < size; i++)
 			list.push(typeValueGenerators[type]());
@@ -155,20 +165,14 @@ function generateScalarValue(type, isList) {
 
 	if(isList && typeValueGenerators.hasOwnProperty(type.name)) {
 		/* eslint-disable-next-line no-magic-numbers */
-		return typeValueGenerators.List(type.name, 5);
+		return typeValueGenerators.List(type.name);
 	}
 
 	if(typeValueGenerators.hasOwnProperty(type.name)) {
 		return typeValueGenerators[type.name]();
 	}
 	
-	if(type.astNode && type.astNode.kind === 'ScalarTypeDefinition') {
-		moduleConsole.error("Scalar types not suppoted")
-		return undefined;
-	}
-	
-	moduleConsole.error(`Unsupported type found.`);
-	return undefined;
+	return typeValueGenerators.String();
 }
 
 /**
