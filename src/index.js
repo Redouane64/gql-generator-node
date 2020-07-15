@@ -2,6 +2,7 @@
 
 import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
 const { buildFederatedSchema } = require('@apollo/federation');
+const gql = require('graphql-tag');
 
 /**
  * Generate the query for the specified field
@@ -198,4 +199,25 @@ export function generateAll(
 	}
 
 	return result;
+}
+
+/**
+ * Generate queries from federated schema
+ * @param {string} typeDef type defs
+ */
+export function generateAllFromFederatedSchema(
+	typeDef,
+	depthLimit = 100, 
+	dedupe = getFieldArgsDict, 
+	generatorOptions = null) {
+	
+	const gqlSchema = buildFederatedSchema([
+		{
+			typeDefs: gql`
+			${typeDef}
+		  `
+		}
+	]);
+
+	return generateAll(gqlSchema, depthLimit, dedupe, generatorOptions);
 }
