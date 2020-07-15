@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-
-import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
 const { buildFederatedSchema } = require('@apollo/federation');
 const gql = require('graphql-tag');
+
+import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
 
 /**
  * Generate the query for the specified field

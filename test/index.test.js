@@ -12,7 +12,7 @@ const schemaWithoutMutation = makeExecutableSchema({ typeDefs: typeDefsWithoutMu
 const schemaTypeDefs = require("./schemas/pineapple.graphql");
 const testSchema = makeExecutableSchema({ typeDefs: schemaTypeDefs });
 
-import { generateAll, generateQuery } from "../src";
+import { generateAll, generateQuery, generateAllFromFederatedSchema } from "../src";
 
 it('validate generated queries', async () => {
 	generateAll(schema, undefined, ({ args }) => {
@@ -173,4 +173,34 @@ it("Generate required only", () => {
 	const es = makeExecutableSchema({typeDefs: s});
 
 	console.log(generateAll(es, undefined, undefined, { requiredOnly: true }));
+})
+
+it("Federated schema support", () => {
+	const s = `type Review {
+		body: String
+		author: User @provides(fields: "username")
+		product: Product
+	  }
+	  
+	  extend type User @key(fields: "id") {
+		id: ID! @external
+		reviews: [Review]
+	  }
+	  
+	  extend type Product @key(fields: "upc") {
+		upc: String! @external
+		reviews: [Review]
+	  }
+
+	  extend type Query {
+		topProducts(first: Int = 5): [Product]
+	  }
+	  
+	  type Product @key(fields: "upc") {
+		upc: String!
+		name: String!
+		price: Int
+	  }`;
+
+	console.log(generateAllFromFederatedSchema(s, undefined, undefined, { requiredOnly: true }))
 })
