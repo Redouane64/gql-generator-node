@@ -10,8 +10,10 @@ const { buildFederatedSchema } = require('@apollo/federation');
  * @param kind of query - Actual Query or Mutation, Subscription
  * @param depthLimit
  * @param dedupe function to resolve query variables conflicts
- * @param generateValues seed fields with generated values for tests
- * @param requiredFieldsOnly generate values for only required fields
+ * @namespace
+ * @property {Object} generatorOptions - if assigned, fields assigned test values
+ * @property {Boolean} generatorOptions.requiredOnly - When set to true, only required (non-nullable) fields will be assigned test values
+ * @property {Boolean} generatorOptions.typesConfig  - Scalar types to their corresponding javascript type
  */
 export const generateQuery = ({
 	                              field: rootField,
@@ -19,8 +21,7 @@ export const generateQuery = ({
 	                              kind = 'Query',
 	                              depthLimit,
 								  dedupe = getFieldArgsDict,
-								  generateValues = false,
-								  requiredFieldsOnly = false
+								  generatorOptions = null
 }) => {
 
 	/**
@@ -42,9 +43,7 @@ export const generateQuery = ({
 		                                duplicateArgCounts = {},
 		                                crossReferenceKeyList = [], // [`${parentName}To${curName}Key`]
 		                                curDepth = 1,
-										path = [],
-										_generateValues = false,
-										requiredOnly = false
+										path = []
 	                                }) => {
 		let curType = field.type;
 		while (curType.ofType) curType = curType.ofType;
@@ -73,9 +72,7 @@ export const generateQuery = ({
 					duplicateArgCounts,
 					crossReferenceKeyList,
 					curDepth: curDepth + 1,
-					path: path.concat(field.name),
-					_generateValues,
-					requiredOnly
+					path: path.concat(field.name)
 				}).queryStr})
 				.filter(cur => cur)
 				.join('\n');
@@ -86,7 +83,7 @@ export const generateQuery = ({
 			if (field.args.length > 0) {
 				const dict = dedupe(field, duplicateArgCounts, argumentsDict, path);
 				Object.assign(argumentsDict, dict);
-				queryStr += `(${getArgsToVarsStr(dict, _generateValues, requiredOnly)})`;
+				queryStr += `(${getArgsToVarsStr(dict, generatorOptions)})`;
 			}
 			if (childQuery) {
 				queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
@@ -117,9 +114,7 @@ export const generateQuery = ({
 							duplicateArgCounts,
 							crossReferenceKeyList,
 							curDepth: curDepth + 2,
-							path: path.concat(field.name),
-							_generateValues,
-							requiredOnly
+							path: path.concat(field.name)
 						}).queryStr)
 						.filter(cur => cur)
 						.join('\n');
@@ -134,9 +129,7 @@ export const generateQuery = ({
 	return wrapQueryIntoKindDeclaration(kind, rootField, generateQueryRecursive({
 		field: rootField,
 		skeleton: rootSkeleton,
-		parentName: kind, 
-		_generateValues: generateValues,
-		requiredOnly: requiredFieldsOnly
+		parentName: kind
 	}));
 };
 
@@ -146,7 +139,22 @@ function wrapQueryIntoKindDeclaration(kind, alias, queryResult) {
 	return `${kind.toLowerCase()} ${alias.name}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
 }
 
-export function generateAll(schema, generateValues = false, requiredFieldsOnly = false, depthLimit = 100, dedupe = getFieldArgsDict) {
+/**
+ * 
+ * @param {Object} schema 
+ * @param {Number} depthLimit 
+ * @param {dedup} dedupe
+ * @namespace
+ * @property {Object} generatorOptions - if assigned, fields assigned test values
+ * @property {Boolean} generatorOptions.requiredOnly - When set to true, only required (non-nullable) fields will be assigned test values
+ * @property {Boolean} generatorOptions.typesConfig  - Scalar types to their corresponding javascript type
+ */
+export function generateAll(
+		schema, 
+		depthLimit = 100, 
+		dedupe = getFieldArgsDict, 
+		generatorOptions = null
+	) {
 
 	const result = {};
 
@@ -167,7 +175,7 @@ export function generateAll(schema, generateValues = false, requiredFieldsOnly =
 			`${String(description).toLowerCase()}s`;
 		result[kind] = {};
 		Object.entries(obj).forEach(([type, field]) => {
-			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, generateValues, requiredFieldsOnly });
+			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, generatorOptions});
 		});
 	};
 
