@@ -25,7 +25,7 @@ it('validate generated queries', async () => {
 });
 
 it('limt depth', async () =>
-	generateAll(schema, false, false, {}, 1).mutations.signup.indexOf('createdAt').should.equal(-1)
+	generateAll(schema, 1).mutations.signup.indexOf('createdAt').should.equal(-1)
 );
 
 it('check field generator', async () =>
@@ -150,7 +150,27 @@ it('check warnings for no mutations, query, subscription in schema', async () =>
 
 it("Generate mock values", () => {
 
-	const result = generateAll(testSchema, true, true)
+	const result = generateAll(testSchema, undefined, undefined, { requiredOnly: true });
 
 	console.log(result);
+})
+
+it("Generate non-required", () => {
+	const s = `type Mutation {
+		DoWork(name: String!, amount: Int): String!
+	  }`;
+
+	const es = makeExecutableSchema({typeDefs: s});
+
+	console.log(generateAll(es, undefined, undefined, { requiredOnly: false }));
+})
+
+it("Generate required only", () => {
+	const s = `type Mutation {
+		DoWork(name: String!, amount: Int): String!
+	  }`;
+
+	const es = makeExecutableSchema({typeDefs: s});
+
+	console.log(generateAll(es, undefined, undefined, { requiredOnly: true }));
 })

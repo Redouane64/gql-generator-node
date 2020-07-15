@@ -57,26 +57,29 @@ export const getFieldArgsDict = (
 
 /**
  * Generate variables string
- * @param dict dictionary of arguments
- */
-export const getArgsToVarsStr = (dict, generateValues, requiredOnly, scalarTypeConfig = {}) =>
+ * @param {Object} args
+ * @param {Object} generatorOptions 					- if assigned, fields assigned test values
+ * @property {Boolean} generatorOptions.requiredOnly 	- When set to true, only required (non-nullable) fields will be assigned test values
+ * @property {Boolean} generatorOptions.typesConfig  	- Scalar types to their corresponding javascript type
+ * */
+export const getArgsToVarsStr = (dict, generatorOptions) =>
 	Object.entries(dict)
 		.map(([fieldName, fieldInfo]) => 
-			generateValues ? mapGeneratedArgsToVars(fieldName, fieldInfo, requiredOnly, scalarTypeConfig) :
+			generatorOptions ? mapGeneratedArgsToVars(fieldInfo, generatorOptions) :
 			`${fieldInfo.name}: $${fieldName}`)
 		.join(', ');
 
-function mapGeneratedArgsToVars(fieldName, fieldTypeInfo, ignoreNonRequired, scalarTypesConfig = {}) {
-	const value = generateArgumentsValues(fieldTypeInfo, fieldName, ignoreNonRequired, scalarTypesConfig);
+function mapGeneratedArgsToVars(fieldTypeInfo, generatorOptions) {
+	const value = generateArgumentsValues(fieldTypeInfo, generatorOptions.requiredOnly, generatorOptions.typesConfig);
 	return `${fieldTypeInfo.name}: ${value}`;
 }
 
-function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, requiredOnly = false, scalarTypesConfig = {}) {
+function generateArgumentsValues(parentFieldTypeInfo, requiredOnly, scalarTypesConfig = {}) {
 	
 	let value = "";
 	// user given types config
 	// GraphQL user defined types to Javascript type
-	const typesConfig = {
+	const defaultTypesConfig = {
 		String: "String",
 		Int: "Number",
 		BigNumber: "Number",
@@ -84,16 +87,14 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 		Boolean: "Boolean",
 		DateTime: "Date"
 	};
-	Object.assign(typesConfig, scalarTypesConfig);
+	Object.assign(defaultTypesConfig, scalarTypesConfig);
 	
-	const createArgumentValueRecursively = 
-		(fieldTypeInfo, 
-		fieldName = null, 
-		_requiredOnly = false) => {
+	const createArgumentValueRecursively = (fieldTypeInfo, _requiredOnly) => {
 
 		let isRequired = false;
 		let isList = false;
 		let astType = fieldTypeInfo.astNode.type;
+
 		while(astType) {
 			
 			if(astType.kind === 'ListType') {
@@ -111,7 +112,7 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 			astType = astType.type;
 		}
 
-		if(!isRequired) {
+		if(!isRequired && _requiredOnly) {
 			return null;
 		}
 
@@ -126,7 +127,7 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 
 			_value += "{ ";
 			_value += Object.entries(type.getFields()).map(([field, typeInfo]) => {
-				return `${field}: ${createArgumentValueRecursively(typeInfo, field, _requiredOnly, typesConfig)}`;
+				return `${field}: ${createArgumentValueRecursively(typeInfo, _requiredOnly, defaultTypesConfig)}`;
 			}).join(",");
 			_value += " }";
 			
@@ -137,16 +138,16 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 			_value += type.astNode.values[0].name.value;
 		} else if (isList) {
 			_value += "[";
-			_value += generateScalarValue(type, isList, typesConfig);
+			_value += generateScalarValue(type, isList, defaultTypesConfig);
 			_value += "]";
 		} else {
-			_value += generateScalarValue(type, isList, typesConfig);
+			_value += generateScalarValue(type, isList, defaultTypesConfig);
 		}
 
 		return _value;
 	}
 
-	value += createArgumentValueRecursively(parentFieldTypeInfo, parentFieldTypeInfo.name, requiredOnly);
+	value += createArgumentValueRecursively(parentFieldTypeInfo, requiredOnly);
 	return value;
 }
 
