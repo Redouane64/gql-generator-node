@@ -59,22 +59,33 @@ export const getFieldArgsDict = (
  * Generate variables string
  * @param dict dictionary of arguments
  */
-export const getArgsToVarsStr = (dict, generateValues, requiredOnly) =>
+export const getArgsToVarsStr = (dict, generateValues, requiredOnly, scalarTypeConfig = {}) =>
 	Object.entries(dict)
 		.map(([fieldName, fieldInfo]) => 
-			generateValues ? mapGeneratedArgsToVars(fieldName, fieldInfo, requiredOnly) :
+			generateValues ? mapGeneratedArgsToVars(fieldName, fieldInfo, requiredOnly, scalarTypeConfig) :
 			`${fieldInfo.name}: $${fieldName}`)
 		.join(', ');
 
-function mapGeneratedArgsToVars(fieldName, fieldTypeInfo, ignoreNonRequired) {
-	const value = generateArgumentsValues(fieldTypeInfo, fieldName, ignoreNonRequired);
+function mapGeneratedArgsToVars(fieldName, fieldTypeInfo, ignoreNonRequired, scalarTypesConfig = {}) {
+	const value = generateArgumentsValues(fieldTypeInfo, fieldName, ignoreNonRequired, scalarTypesConfig);
 	return `${fieldTypeInfo.name}: ${value}`;
 }
 
-function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, requiredOnly = false) {
+function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, requiredOnly = false, scalarTypesConfig = {}) {
 	
 	let value = "";
-
+	// user given types config
+	// GraphQL user defined types to Javascript type
+	const typesConfig = {
+		String: "String",
+		Int: "Number",
+		BigNumber: "Number",
+		Float: "Number",
+		Boolean: "Boolean",
+		DateTime: "Date"
+	};
+	Object.assign(typesConfig, scalarTypesConfig);
+	
 	const createArgumentValueRecursively = 
 		(fieldTypeInfo, 
 		fieldName = null, 
@@ -109,19 +120,27 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 		let _value = "";
 
 		if (type.astNode && type.astNode.kind === 'InputObjectTypeDefinition') {
+
+			if(isList)
+				_value += "[";
+
 			_value += "{ ";
 			_value += Object.entries(type.getFields()).map(([field, typeInfo]) => {
-				return `${field}: ${createArgumentValueRecursively(typeInfo, field, _requiredOnly)}`;
+				return `${field}: ${createArgumentValueRecursively(typeInfo, field, _requiredOnly, typesConfig)}`;
 			}).join(",");
 			_value += " }";
+			
+			if(isList)
+				_value += "]";
+
 		} else if (type.astNode && type.astNode.kind === 'EnumTypeDefinition') {
 			_value += type.astNode.values[0].name.value;
 		} else if (isList) {
 			_value += "[";
-			_value += generateScalarValue(type, isList);
+			_value += generateScalarValue(type, isList, typesConfig);
 			_value += "]";
 		} else {
-			_value += generateScalarValue(type, isList);
+			_value += generateScalarValue(type, isList, typesConfig);
 		}
 
 		return _value;
@@ -131,48 +150,59 @@ function generateArgumentsValues(parentFieldTypeInfo, parentFieldName = null, re
 	return value;
 }
 
-const typeValueGenerators = {
+/* Mapping from Javascript types to user defined graphql scalar types */
+
+const primitiveTypesFactory = {
 	/* eslint-disable-next-line no-magic-numbers */
 	String: (length = 10) => {
 		let result = "";
-		const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+		const alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 		for(let i = 0; i < length; i++) {
-			result += chars.charAt(Math.floor(Math.random() * chars.length))
+			result += alphabets.charAt(Math.floor(Math.random() * alphabets.length))
 		}
 		return `'${result}'`;
 	},
 
 	/* eslint-disable-next-line no-magic-numbers */
-	Int: () => Math.floor(Math.random() * 1000000),
+	Number: (min = 0, max = 1000, float = false) => min + (float ? (Math.random() * max): Math.floor(Math.random() * max)),
 	
 	Boolean: () => true,
 
-	/* eslint-disable-next-line no-magic-numbers */
-	Float: () => Math.random() * 1000000,
-	
-	Any: () => null,
+	BigInt: () => primitiveTypesFactory.Int(),
+
+	Date: () => `'${new Date().toISOString()}'`,
 
 	/* eslint-disable-next-line no-magic-numbers */
 	List: (type, size = 3) => {
 		const list = [];
 		for(let i = 0; i < size; i++)
-			list.push(typeValueGenerators[type]());
+			list.push(primitiveTypesFactory[type]());
 		return list;
 	}
 };
 
-function generateScalarValue(type, isList) {
+function generateScalarValue(type, isList, typesConfig) {
 
-	if(isList && typeValueGenerators.hasOwnProperty(type.name)) {
+	if(isList && primitiveTypesFactory.hasOwnProperty(type.name)) {
 		/* eslint-disable-next-line no-magic-numbers */
-		return typeValueGenerators.List(type.name);
+		return primitiveTypesFactory.List(type.name);
 	}
 
-	if(typeValueGenerators.hasOwnProperty(type.name)) {
-		return typeValueGenerators[type.name]();
+	if(primitiveTypesFactory.hasOwnProperty(type.name)) {
+		return primitiveTypesFactory[type.name]();
+	}
+
+	if(type.astNode && type.astNode.kind === 'ScalarTypeDefinition') {
+		const typeName = typesConfig[type.name];
+
+		if(!primitiveTypesFactory.hasOwnProperty(typeName)) {
+			throw new Error("Unrecognized scalar type.");
+		}
+
+		return primitiveTypesFactory[typeName]();
 	}
 	
-	return typeValueGenerators.String();
+	return primitiveTypesFactory.String();
 }
 
 /**

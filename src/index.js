@@ -19,7 +19,8 @@ export const generateQuery = ({
 	                              depthLimit,
 								  dedupe = getFieldArgsDict,
 								  generateValues = false,
-								  requiredFieldsOnly = false
+								  requiredFieldsOnly = false,
+								  scalarTypeConfig = {}
 }) => {
 
 	/**
@@ -145,7 +146,16 @@ function wrapQueryIntoKindDeclaration(kind, alias, queryResult) {
 	return `${kind.toLowerCase()} ${alias.name}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
 }
 
-export function generateAll(schema, generateValues = false, requiredFieldsOnly = false, depthLimit = 100, dedupe = getFieldArgsDict) {
+/**
+ * 
+ * @param {Object} schema 
+ * @param {Boolean} generateValues If set to true, dummy values are assigned to fiels
+ * @param {Boolean} requiredFieldsOnly Generate dummy values for required fields only
+ * @param {Object} scalarTypeConfig Mapping config of user defined scalar type to their corresponding JS type
+ * @param {Number} depthLimit 
+ * @param {Function} dedupe 
+ */
+export function generateAll(schema, generateValues = false, requiredFieldsOnly = false, scalarTypeConfig = {}, depthLimit = 100, dedupe = getFieldArgsDict) {
 
 	const result = {};
 
@@ -166,7 +176,7 @@ export function generateAll(schema, generateValues = false, requiredFieldsOnly =
 			`${String(description).toLowerCase()}s`;
 		result[kind] = {};
 		Object.entries(obj).forEach(([type, field]) => {
-			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, generateValues, requiredFieldsOnly });
+			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, generateValues, requiredFieldsOnly, scalarTypeConfig });
 		});
 	};
 
