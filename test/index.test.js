@@ -176,31 +176,29 @@ it("Generate required only", () => {
 })
 
 it("Federated schema support", () => {
-	const s = `type Review {
-		body: String
-		author: User @provides(fields: "username")
-		product: Product
-	  }
-	  
-	  extend type User @key(fields: "id") {
-		id: ID! @external
-		reviews: [Review]
-	  }
-	  
-	  extend type Product @key(fields: "upc") {
-		upc: String! @external
-		reviews: [Review]
-	  }
+	const s = `
+		type Mutation {
+			DoWork(name: String!, amount: Int): String!
+	 	}
+		type User @key(fields: "id") {
+			id: ID!
+			username: String!
+		}
 
-	  extend type Query {
-		topProducts(first: Int = 5): [Product]
-	  }
-	  
-	  type Product @key(fields: "upc") {
-		upc: String!
-		name: String!
-		price: Int
-	  }`;
+		extend type Query {
+			me: User
+		}
+			
+		type Review {
+			body: String
+			author: User @provides(fields: "username")
+		}
+		
+		extend type User @key(fields: "id") {
+			reviews: [Review]
+		}
+	`;
 
-	console.log(generateAllFromFederatedSchema(s, undefined, undefined, { requiredOnly: true }))
+	const result = generateAllFromFederatedSchema(s, undefined, undefined, { requiredOnly: false });
+	console.log(result);
 })

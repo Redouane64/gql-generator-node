@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const { buildFederatedSchema } = require('@apollo/federation');
+const fed = require('@apollo/federation');
 const gql = require('graphql-tag');
 
 import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
@@ -175,7 +175,9 @@ export function generateAll(
 			moduleConsole.warn(`unknown description string: ${description}`) ||
 			`${String(description).toLowerCase()}s`;
 		result[kind] = {};
-		Object.entries(obj).forEach(([type, field]) => {
+		Object.entries(obj)
+		.filter((t) => t[0] !== '_entities' && t[0] !== '_service')
+		.forEach(([type, field]) => {
 			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, generatorOptions});
 		});
 	};
@@ -211,13 +213,12 @@ export function generateAllFromFederatedSchema(
 	dedupe = getFieldArgsDict, 
 	generatorOptions = null) {
 	
-	const gqlSchema = buildFederatedSchema([
+	const schema = fed.buildFederatedSchema([
 		{
 			typeDefs: gql`
-			${typeDef}
-		  `
+			${typeDef}`
 		}
 	]);
 
-	return generateAll(gqlSchema, depthLimit, dedupe, generatorOptions);
+	return generateAll(schema, depthLimit, dedupe, generatorOptions);
 }

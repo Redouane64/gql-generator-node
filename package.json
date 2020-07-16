@@ -35,7 +35,7 @@
   "homepage": "https://github.com/Skitionek/gql-generator-node/#readme",
   "dependencies": {
     "@apollo/federation": "^0.17.0",
-    "graphql": "^0.13.2"
+    "graphql": "^15.3.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.4.4",
@@ -60,8 +60,8 @@
     "eslint-plugin-jest": "^22.6.4",
     "eslint-plugin-prettier": "^3.1.0",
     "graphql-import-node": "0.0.2",
-    "graphql-tag": "^2.10.1",
-    "graphql-tools": "^4.0.4",
+    "graphql-tag": "^2.10.4",
+    "graphql-tools": "^6.0.13",
     "jest": "^24.8.0",
     "jest-summary-reporter": "0.0.2",
     "jest-transform-graphql": "^2.1.0",
