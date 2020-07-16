@@ -189,8 +189,8 @@ function generateScalarValue(type, isList, typesConfig) {
 		return primitiveTypesFactory.List(type.name);
 	}
 
-	if(primitiveTypesFactory.hasOwnProperty(type.name)) {
-		return primitiveTypesFactory[type.name]();
+	if(primitiveTypesFactory.hasOwnProperty(typesConfig[type.name])) {
+		return primitiveTypesFactory[typesConfig[type.name]]();
 	}
 
 	if(type.astNode && type.astNode.kind === 'ScalarTypeDefinition') {
