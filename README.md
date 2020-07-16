@@ -58,6 +58,8 @@ It supports all query types:
 + Query
 + Mutation
 + Subscription 
++ Test values generator
++ Support for federated schema via `generateAllFromFederatedSchema`
 
 as well as all fields descriptors, including unions, interfaces and fragments.
 
@@ -83,6 +85,56 @@ mutation signup($username: String!, email: String!, password: String!){
   }
 }
 */
+```
+
+To generate random test data pass config object to `generateAll` function
+```js
+
+const result = generateAll(schema, undefined, undefined, { requiredOnly: true, typesConfig: { ... } })
+```
+
+`typesConfig` parameter is an object that maps a user-defined scalar types to its Javascript primitive type, example:
+```js
+{
+    BigNumber: "Number",
+    DateTime: "Date",
+    Float: "Number"
+}
+```
+This helps the generator to assign a valid value for fields that are of scalar type.
+
+if `requiredOnly` is set true test values are not generated for optional (nullable) fields.
+
+### **NOTE**: The mentioned usage above applies for and `generateQuery` `generateAllFromFederatedSchema` as well.
+
+Output example with generated fields:
+```graphql
+scalar BigNumber
+input UserInfo {
+    firstName: String!
+    lastName: String!
+    age: Int
+}
+type Result {
+    userId: Int,
+    totalAmount: BigNumber
+}
+type Mutation {
+    DoWork(user: UserInfo!, amount: BigNumber): Result!
+}
+```
+Produces this output:
+```js
+{
+    mutations: {
+        DoWork: `query DoWork($user: UserInfo!, $amount: BigNumber) {
+            DoWork(user: { firstName: 'UGpZkclIcq',lastName: '2ZFTxngxmq',age: 354 }, amount: 746){
+                userId
+                totalAmount
+            }
+        }`
+    }
+}
 ```
 
 ## Advanced usage 
