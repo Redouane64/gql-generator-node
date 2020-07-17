@@ -9,9 +9,6 @@ require('should');
 const schema = makeExecutableSchema({ typeDefs });
 const schemaWithoutMutation = makeExecutableSchema({ typeDefs: typeDefsWithoutMutation });
 
-const schemaTypeDefs = require("./schemas/pineapple.graphql");
-const testSchema = makeExecutableSchema({ typeDefs: schemaTypeDefs });
-
 import { generateAll, generateQuery, generateAllFromFederatedSchema } from "../src";
 
 it('validate generated queries', async () => {
@@ -150,33 +147,49 @@ it('check warnings for no mutations, query, subscription in schema', async () =>
 
 it("Generate mock values", () => {
 
+	const schemaTypeDefs = require("./schemas/schema.graphql");
+	const testSchema = makeExecutableSchema({ typeDefs: schemaTypeDefs });
+
 	const result = generateAll(testSchema, undefined, undefined, { requiredOnly: true });
 
 	console.log(result);
 })
 
 it("Generate non-required", () => {
-	const s = `type Mutation {
+	const testTypeDef = `type Mutation {
 		DoWork(name: String!, amount: Int): String!
 	  }`;
 
-	const es = makeExecutableSchema({typeDefs: s});
+	const testSchema = makeExecutableSchema({typeDefs: testTypeDef});
 
-	console.log(generateAll(es, undefined, undefined, { requiredOnly: false }));
+	console.log(generateAll(testSchema, undefined, undefined, { requiredOnly: false }));
 })
 
 it("Generate required only", () => {
-	const s = `type Mutation {
-		DoWork(name: String!, amount: Int): String!
+	const testTypeDefs = `
+	  scalar BigNumber
+	  input UserInfo {
+		  firstName: String!
+		  lastName: String!
+		  age: Int
+	  }
+	  type Result {
+		  userId: Int,
+		  totalAmount: BigNumber
+	  }
+	  type Mutation {
+		DoWork(user: UserInfo!, amount: BigNumber): Result!
 	  }`;
 
-	const es = makeExecutableSchema({typeDefs: s});
+	const testSchema = makeExecutableSchema({typeDefs: testTypeDefs});
+	const result = generateAll(testSchema, undefined, undefined, { requiredOnly: false });
+	console.log(result);
 
-	console.log(generateAll(es, undefined, undefined, { requiredOnly: true }));
+	result.should.have.property('mutations').have.property('DoWork');
 })
 
 it("Federated schema support", () => {
-	const s = `
+	const testTypeDefs = `
 		type Mutation {
 			DoWork(name: String!, amount: Int): String!
 	 	}
@@ -199,6 +212,9 @@ it("Federated schema support", () => {
 		}
 	`;
 
-	const result = generateAllFromFederatedSchema(s, undefined, undefined, { requiredOnly: false });
+	const result = generateAllFromFederatedSchema(testTypeDefs, undefined, undefined, { requiredOnly: false });
 	console.log(result);
+
+	result.should.have.property('mutations').have.property('DoWork');
+	result.should.have.property('queries').have.property('me');
 })
