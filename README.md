@@ -105,7 +105,7 @@ This helps the generator to assign a valid value for fields that are of scalar t
 
 if `requiredOnly` is set true test values are not generated for optional (nullable) fields.
 
-### **NOTE**: The mentioned usage above applies for and `generateQuery` `generateAllFromFederatedSchema` as well.
+### **NOTE**: The `generateQuery` `generateAllFromFederatedSchema` accepts `generatorOptions` argument. Additionaly `generateAllFromFederatedSchema` accepts typeDef string as first argument.
 
 Output example with generated fields:
 ```graphql
