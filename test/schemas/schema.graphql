@@ -1,0 +1,165 @@
+scalar BigNumber
+scalar DateTime
+
+enum DirectionType {
+  INCOMING
+  OUTGOING
+}
+
+enum TransactionStatus {
+  PENDING
+  UNCONFIRMED
+  CONFIRMED
+}
+
+type AddressWithAmount {
+  txId: String!
+  address: String!
+  amount: BigNumber!
+}
+
+type TransactionObject {
+  id: ID!
+  height: Int!
+  confirmations: Int!
+  confirmationsRequired: Int!
+  direction: DirectionType!
+  from: [AddressWithAmount!]
+  to: [AddressWithAmount!]!
+  sum: BigNumber!
+  fee: BigNumber!
+  status: TransactionStatus!
+  blockTimestamp: DateTime!
+}
+
+type TransactionsConnection {
+  nodes: [TransactionObject!]
+  cursor: String
+}
+
+enum AddressType {
+  EXTERNAL
+  CHANGE
+}
+
+type Account {
+  id: ID!
+  blockchain: String!
+  createdAt: DateTime!
+  addressesUsed(type: AddressType!): Int!
+  totalBalance: BigNumber!
+  transactions(first: Int!, after: String): TransactionsConnection!
+  transactionsByAddress(
+    address: String!
+    first: Int!
+    after: String
+  ): TransactionsConnection!
+  addresses(first: Int!, after: String): AddressesConnection!
+}
+
+type AddressInfo {
+  address: String!
+  balance: BigNumber!
+  isUsed: Boolean!
+  type: AddressType!
+}
+
+type AddressesConnection {
+  nodes: [AddressInfo!]
+  cursor: String
+}
+
+type AccountsConnection {
+  nodes: [Account!]
+  cursor: String
+}
+
+type UnsignedTransactionInput {
+  txId: String!
+  vout: Int!
+  address: String!
+  type: String!
+  number: Int!
+}
+
+type TransactionForSign {
+  hex: String!
+  sum: BigNumber!
+  fee: BigNumber!
+  inputs: [UnsignedTransactionInput!]
+}
+
+# union TransactionForSign = UnsignedTransactionWithInputs | JSONObject
+
+input AccountsInput {
+  uuid: String!
+  first: Int!
+  after: String
+}
+
+input AccountInput {
+  uuid: String!
+  id: String!
+}
+
+type Query {
+  accounts(input: AccountsInput!): AccountsConnection
+  account(input: AccountInput!): Account
+}
+
+input GasFeeInput {
+  gasPrice: BigNumber!
+  gas: BigNumber!
+}
+
+input MakeTransactionInput {
+  uuid: String!
+  fromAccount: String!
+  fromAddress: String
+  toAddress: String!
+  amount: BigNumber!
+  feePerKb: BigNumber
+  feeGas: GasFeeInput
+}
+
+input MakeTransactionSendEverythingInput {
+  uuid: String!
+  fromAccount: String!
+  fromAddress: String
+  toAddress: String!
+  feePerKb: BigNumber
+  feeGas: GasFeeInput
+}
+
+input SendTransactionInput {
+  uuid: String!
+  blockchain: String!
+  hex: [String!]!
+}
+
+input ImportAddressOrPublicKeyInput {
+  uuid: String!
+  blockchain: String!
+  address: String
+  publicKey: String
+}
+
+input ImportMasterPublicKeyInput {
+  uuid: String!
+  blockchain: String
+  publicKey: String!
+}
+
+type Mutation {
+  importAddressOrPublicKey(input: ImportAddressOrPublicKeyInput!): Account!
+  importMasterPublicKey(input: ImportMasterPublicKeyInput!): Account!
+  makeTransaction(input: MakeTransactionInput!): TransactionForSign!
+  makeTransactionSendEverything(
+    input: MakeTransactionSendEverythingInput!
+  ): TransactionForSign!
+  sendTransaction(input: SendTransactionInput!): Boolean!
+}
+
+type Subscription {
+  accountChanges(id: String!): Account!
+}

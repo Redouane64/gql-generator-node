@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+const fed = require('@apollo/federation');
+const gql = require('graphql-tag');
 
 import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } from "./utils";
 
@@ -9,13 +11,18 @@ import { getArgsToVarsStr, getFieldArgsDict, getVarsToTypesStr, moduleConsole } 
  * @param kind of query - Actual Query or Mutation, Subscription
  * @param depthLimit
  * @param dedupe function to resolve query variables conflicts
+ * @namespace
+ * @property {Object} generatorOptions - if assigned, fields assigned test values
+ * @property {Boolean} generatorOptions.requiredOnly - When set to true, only required (non-nullable) fields will be assigned test values
+ * @property {Boolean} generatorOptions.typesConfig  - Scalar types to their corresponding javascript type
  */
 export const generateQuery = ({
 	                              field: rootField,
 	                              skeleton: rootSkeleton,
 	                              kind = 'Query',
 	                              depthLimit,
-	                              dedupe = getFieldArgsDict
+								  dedupe = getFieldArgsDict,
+								  generatorOptions = null
 }) => {
 
 	/**
@@ -37,7 +44,7 @@ export const generateQuery = ({
 		                                duplicateArgCounts = {},
 		                                crossReferenceKeyList = [], // [`${parentName}To${curName}Key`]
 		                                curDepth = 1,
-		                                path = []
+										path = []
 	                                }) => {
 		let curType = field.type;
 		while (curType.ofType) curType = curType.ofType;
@@ -57,7 +64,8 @@ export const generateQuery = ({
 					.filter(([key]) => skeletonKeys.indexOf(key) !== -1)
 			} else skeleton = {};
 			childQuery = childQuery
-				.map(([key, childField]) => generateQueryRecursive({
+				.map(([key, childField]) => {
+					return generateQueryRecursive({
 					field: childField,
 					skeleton: skeleton[key],
 					parentName: field.name,
@@ -66,7 +74,7 @@ export const generateQuery = ({
 					crossReferenceKeyList,
 					curDepth: curDepth + 1,
 					path: path.concat(field.name)
-				}).queryStr)
+				}).queryStr})
 				.filter(cur => cur)
 				.join('\n');
 		}
@@ -76,7 +84,7 @@ export const generateQuery = ({
 			if (field.args.length > 0) {
 				const dict = dedupe(field, duplicateArgCounts, argumentsDict, path);
 				Object.assign(argumentsDict, dict);
-				queryStr += `(${getArgsToVarsStr(dict)})`;
+				queryStr += `(${getArgsToVarsStr(dict, generatorOptions)})`;
 			}
 			if (childQuery) {
 				queryStr += `{\n${childQuery}\n${'    '.repeat(curDepth)}}`;
@@ -132,7 +140,22 @@ function wrapQueryIntoKindDeclaration(kind, alias, queryResult) {
 	return `${kind.toLowerCase()} ${alias.name}${varsToTypesStr ? `(${varsToTypesStr})` : ''}{\n${query}\n}`;
 }
 
-export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict) {
+/**
+ * 
+ * @param {Object} schema 
+ * @param {Number} depthLimit 
+ * @param {dedup} dedupe
+ * @namespace
+ * @property {Object} generatorOptions - if assigned, fields assigned test values
+ * @property {Boolean} generatorOptions.requiredOnly - When set to true, only required (non-nullable) fields will be assigned test values
+ * @property {Boolean} generatorOptions.typesConfig  - Scalar types to their corresponding javascript type
+ */
+export function generateAll(
+		schema, 
+		depthLimit = 100, 
+		dedupe = getFieldArgsDict, 
+		generatorOptions = null
+	) {
 
 	const result = {};
 
@@ -152,8 +175,10 @@ export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict)
 			moduleConsole.warn(`unknown description string: ${description}`) ||
 			`${String(description).toLowerCase()}s`;
 		result[kind] = {};
-		Object.entries(obj).forEach(([type, field]) => {
-			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe });
+		Object.entries(obj)
+		.filter((t) => t[0] !== '_entities' && t[0] !== '_service')
+		.forEach(([type, field]) => {
+			result[kind][type] = generateQuery({ field, parentName: description, depthLimit, dedupe, generatorOptions});
 		});
 	};
 
@@ -176,4 +201,24 @@ export function generateAll(schema, depthLimit = 100, dedupe = getFieldArgsDict)
 	}
 
 	return result;
+}
+
+/**
+ * Generate queries from federated schema
+ * @param {string} typeDef type defs
+ */
+export function generateAllFromFederatedSchema(
+	typeDef,
+	depthLimit = 100, 
+	dedupe = getFieldArgsDict, 
+	generatorOptions = null) {
+	
+	const schema = fed.buildFederatedSchema([
+		{
+			typeDefs: gql`
+			${typeDef}`
+		}
+	]);
+
+	return generateAll(schema, depthLimit, dedupe, generatorOptions);
 }

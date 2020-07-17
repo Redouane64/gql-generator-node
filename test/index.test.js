@@ -1,12 +1,15 @@
 require('graphql-import-node');
+
 const typeDefs = require('./schemas/sampleTypeDef.graphql');
 const typeDefsWithoutMutation = require('./schemas/empty.graphql');
+
 const makeExecutableSchema = require('graphql-tools').makeExecutableSchema;
 require('should');
 
 const schema = makeExecutableSchema({ typeDefs });
 const schemaWithoutMutation = makeExecutableSchema({ typeDefs: typeDefsWithoutMutation });
-import { generateAll, generateQuery } from "../src";
+
+import { generateAll, generateQuery, generateAllFromFederatedSchema } from "../src";
 
 it('validate generated queries', async () => {
 	generateAll(schema, undefined, ({ args }) => {
@@ -141,3 +144,77 @@ it('check warnings for no mutations, query, subscription in schema', async () =>
 		generateAll(schemaWithoutMutation)
 	).toMatchSnapshot()
 );
+
+it("Generate mock values", () => {
+
+	const schemaTypeDefs = require("./schemas/schema.graphql");
+	const testSchema = makeExecutableSchema({ typeDefs: schemaTypeDefs });
+
+	const result = generateAll(testSchema, undefined, undefined, { requiredOnly: true });
+
+	console.log(result);
+})
+
+it("Generate non-required", () => {
+	const testTypeDef = `type Mutation {
+		DoWork(name: String!, amount: Int): String!
+	  }`;
+
+	const testSchema = makeExecutableSchema({typeDefs: testTypeDef});
+
+	console.log(generateAll(testSchema, undefined, undefined, { requiredOnly: false }));
+})
+
+it("Generate required only", () => {
+	const testTypeDefs = `
+	  scalar BigNumber
+	  input UserInfo {
+		  firstName: String!
+		  lastName: String!
+		  age: Int
+	  }
+	  type Result {
+		  userId: Int,
+		  totalAmount: BigNumber
+	  }
+	  type Mutation {
+		DoWork(user: UserInfo!, amount: BigNumber): Result!
+	  }`;
+
+	const testSchema = makeExecutableSchema({typeDefs: testTypeDefs});
+	const result = generateAll(testSchema, undefined, undefined, { requiredOnly: false });
+	console.log(result);
+
+	result.should.have.property('mutations').have.property('DoWork');
+})
+
+it("Federated schema support", () => {
+	const testTypeDefs = `
+		type Mutation {
+			DoWork(name: String!, amount: Int): String!
+	 	}
+		type User @key(fields: "id") {
+			id: ID!
+			username: String!
+		}
+
+		extend type Query {
+			me: User
+		}
+			
+		type Review {
+			body: String
+			author: User @provides(fields: "username")
+		}
+		
+		extend type User @key(fields: "id") {
+			reviews: [Review]
+		}
+	`;
+
+	const result = generateAllFromFederatedSchema(testTypeDefs, undefined, undefined, { requiredOnly: false });
+	console.log(result);
+
+	result.should.have.property('mutations').have.property('DoWork');
+	result.should.have.property('queries').have.property('me');
+})
